@@ -97,17 +97,22 @@ st.write(
     "Check grammar, review suggested corrections, and explore "
     "the analysis. Writing is checked with a local LanguageTool engine when available."
 )
+st.caption("Paste or type your own text below, then select **Check grammar**.")
 
 with st.sidebar:
     st.header("Suggestion options")
     include_style_suggestions = st.checkbox("Include optional style rewrites", value=True)
     st.caption("Phrase-based rewrites are optional and separate from grammar corrections. A limited rule-based checker is used if LanguageTool is unavailable.")
 
-st.session_state.setdefault("input_text", SAMPLE_TEXT)
+st.session_state.setdefault("input_text", "")
+if st.button("Load example text"):
+    st.session_state["input_text"] = SAMPLE_TEXT
+
 with st.form("grammar_check"):
     text = st.text_area(
-        "Text to check", height=170, max_chars=MAX_TEXT_CHARS,
-        placeholder="Paste a sentence or paragraph…", key="input_text",
+        "Enter your own text", key="input_text", height=200,
+        max_chars=MAX_TEXT_CHARS,
+        placeholder="Type or paste a sentence or paragraph here…",
     )
     submitted = st.form_submit_button("Check grammar", type="primary")
 
