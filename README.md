@@ -23,7 +23,7 @@ A local Flask and Streamlit NLP application. Both interfaces use a shared local 
 
 ## Install and run
 
-Python 3.10+ and Java 17+ are recommended. The first LanguageTool check needs internet access to download the local engine; the submitted writing is then checked by the local Java process. Streamlit Community Cloud installs Java 17 from `packages.txt`. From this directory:
+Python 3.10+ and Java 17+ are recommended. The first LanguageTool check needs internet access to download the local engine; the submitted writing is then checked by the local Java process. Streamlit Community Cloud installs Java 21 from `packages.txt`. From this directory:
 
 ```bash
 python -m venv .venv
