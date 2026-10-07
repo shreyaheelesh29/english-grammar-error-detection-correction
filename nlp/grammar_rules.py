@@ -32,6 +32,20 @@ def detect_subject_verb(sentence):
             found.append({"original": verb, "corrected": expected.capitalize() if verb[0].isupper() else expected,
                           "error_type": "Subject-Verb Agreement", "message": f"The subject '{subject}' requires '{expected}' in this form.",
                           "start": m.start(2), "end": m.end(2)})
+    # Existential "there" agrees with the noun phrase that follows it.
+    for m in re.finditer(r"\bthere\s+(is|are|was|were)\s+(\d+|one|two|three|four|five|six|several|many)\b", sentence, re.I):
+        quantity = m.group(2).lower()
+        plural = quantity not in {"1", "one"}
+        verb = m.group(1).lower()
+        # If the same sentence has a clear past predicate, keep this existential
+        # clause in that past narrative (e.g. "There is three dogs ... and we were...").
+        past_context = verb in {"was", "were"} or bool(re.search(r"\b(?:yesterday|last\s+(?:night|week|month|year)|was|were|went|said|told|got|ate|bought)\b", sentence, re.I))
+        expected = ("were" if plural else "was") if past_context else ("are" if plural else "is")
+        if verb != expected:
+            original = m.group(1)
+            found.append({"original": original, "corrected": expected.capitalize() if original[0].isupper() else expected,
+                          "error_type": "Subject-Verb Agreement", "message": f"With 'there', the verb agrees with the following quantity: use '{expected}'.",
+                          "start": m.start(1), "end": m.end(1)})
     # Agreement follows the head noun in common singular "X of Y" phrases.
     for m in re.finditer(r"\b(the|a|this|that|my|your|his|her|our|their)?\s*(list|group|set|collection|series)\s+of\s+(?:(?:the|these|those|my|your|our|their)\s+)?([A-Za-z]+)\s+(are|were|have|do)\b", sentence, re.I):
         head, verb = m.group(2).lower(), m.group(4).lower()
@@ -104,17 +118,116 @@ def detect_number_agreement(sentence):
             out.append({"original": noun, "corrected": plural, "error_type": "Noun Number",
                         "message": f"A list or group normally contains plural count nouns; use '{plural}' here.",
                         "start": m.start(2), "end": m.end(2)})
+    # Explicit quantities and "some" commonly require plural count nouns.
+    for m in re.finditer(r"\b(\d+|one|two|three|four|five|six|several|many|some)\s+(dog|cat|book|car|student|apple|orange|friend|child|person|ticket|item)\b", sentence, re.I):
+        quantity, noun = m.group(1).lower(), m.group(2)
+        if quantity in {"1", "one"}:
+            continue
+        plural = irregular_plural.get(noun.lower(), noun + "s")
+        out.append({"original": noun, "corrected": plural, "error_type": "Noun Number",
+                    "message": f"'{quantity}' normally takes a plural count noun here: '{plural}'.",
+                    "start": m.start(2), "end": m.end(2)})
     return out
 
 
 def detect_tense(sentence):
     out = []
-    m = re.search(r"\b(yesterday|last week|last month)\b.{0,30}?\b(I|you|he|she|it|we|they)\s+(go|goes)\b", sentence, re.I)
-    if m:
-        v = re.search(r"\b(go|goes)\b", sentence[m.start():m.end()], re.I)
-        start = m.start() + v.start(); end = m.start() + v.end()
-        out.append({"original": sentence[start:end], "corrected": "went", "error_type": "Tense Error",
-                    "message": "The past-time expression indicates that 'go' should use its past form 'went'.", "start": start, "end": end})
+    # A time adverb alone cannot determine tense in every sentence, so this
+    # deliberately handles common simple-past contexts and a controlled verb
+    # list. It is broader than the original go-only rule, without pretending to
+    # infer tense from unrestricted context.
+    explicit_past_cue = re.search(r"\b(?:yesterday|last\s+(?:night|week|month|year|monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b", sentence, re.I)
+
+    irregular = {
+        "go": "went", "goes": "went", "say": "said", "says": "said",
+        "have": "had", "has": "had", "do": "did", "does": "did",
+        "get": "got", "gets": "got", "eat": "ate", "eats": "ate",
+        "come": "came", "comes": "came", "see": "saw", "sees": "saw",
+        "take": "took", "takes": "took", "make": "made", "makes": "made",
+        "buy": "bought", "buys": "bought", "give": "gave", "gives": "gave",
+        "run": "ran", "runs": "ran", "write": "wrote", "writes": "wrote",
+        "speak": "spoke", "speaks": "spoke", "drive": "drove", "drives": "drove",
+        "leave": "left", "leaves": "left", "meet": "met", "meets": "met",
+        "find": "found", "finds": "found", "think": "thought", "thinks": "thought",
+        "tell": "told", "tells": "told",
+    }
+    regular = {
+        "walk": "walked", "walks": "walked", "play": "played", "plays": "played",
+        "work": "worked", "works": "worked", "open": "opened", "opens": "opened",
+        "close": "closed", "closes": "closed", "stop": "stopped", "stops": "stopped",
+        "study": "studied", "studies": "studied", "live": "lived", "lives": "lived",
+        "visit": "visited", "visits": "visited", "use": "used", "uses": "used",
+        "call": "called", "calls": "called", "help": "helped", "helps": "helped",
+        "want": "wanted", "wants": "wanted", "need": "needed", "needs": "needed",
+    }
+    present_forms = {**irregular, **regular}
+    if explicit_past_cue:
+        for m in re.finditer(r"\b(" + "|".join(sorted(present_forms, key=len, reverse=True)) + r")\b", sentence, re.I):
+            # Preserve infinitives and verbs already governed by an auxiliary.
+            prefix = sentence[max(0, m.start() - 18):m.start()]
+            if re.search(r"\b(?:to|for|did|does|do|will|would|can|could|should|may|might|must)\s+$", prefix, re.I):
+                continue
+            original = m.group(1)
+            corrected = present_forms[original.lower()]
+            if original.isupper():
+                corrected = corrected.upper()
+            elif original[0].isupper():
+                corrected = corrected.capitalize()
+            out.append({"original": original, "corrected": corrected, "error_type": "Tense Error",
+                        "message": f"The past-time expression suggests using the past form '{corrected.lower()}'. Check that the surrounding context refers to a completed past event.",
+                        "start": m.start(1), "end": m.end(1)})
+    # A temporal "when ... get back" clause often inherits the past timeline
+    # from its clause when that clause already contains a clear past predicate.
+    past_context = re.search(r"\b(?:was|were|had|went|said|told|ate|bought|came|got|(?:should|could|would|might)\s+(?:have|of)\s+\w+(?:ed|en|t))\b", sentence, re.I)
+    if past_context:
+        for m in re.finditer(r"\bwhen\s+(?:I|you|he|she|it|we|they)\s+(get|gets)\s+back\b", sentence, re.I):
+            original = m.group(1)
+            out.append({"original": original, "corrected": "got", "error_type": "Tense Error",
+                        "message": "This 'when' clause describes a return within an already past event; use 'got' here.",
+                        "start": m.start(1), "end": m.end(1)})
+    return out
+
+
+def detect_verb_forms(sentence):
+    out = []
+    for m in re.finditer(r"\bfor\s+(buy)\b", sentence, re.I):
+        out.append({"original": m.group(0), "corrected": "to " + m.group(1), "error_type": "Verb Form Error",
+                    "message": "Use the infinitive 'to buy' to express the purpose of going to a store.",
+                    "start": m.start(), "end": m.end()})
+    for m in re.finditer(r"\b(should|could|would|might|must)\s+of\b", sentence, re.I):
+        original = m.group(0)
+        out.append({"original": original, "corrected": m.group(1) + " have", "error_type": "Verb Form Error",
+                    "message": "After a modal verb, use 'have' in this perfect construction; 'of' is not the auxiliary.",
+                    "start": m.start(), "end": m.end()})
+    # In this common construction, move "very" before the -ed adjective.
+    for m in re.finditer(r"\b(?:I|we|they|he|she|it)\s+(?:am|is|are|was|were)\s+(shocking|amazing|boring|exciting|surprising|confusing|frightening)\s+very much\b", sentence, re.I):
+        adjective = m.group(1)
+        corrected = adjective[:-3] + "ed" if adjective.lower().endswith("ing") else adjective
+        out.append({"original": m.group(1) + " very much", "corrected": "very " + corrected,
+                    "error_type": "Word Form Error", "message": "Use the -ed adjective for the person or group experiencing the feeling, and place 'very' before it.",
+                    "start": m.start(1), "end": m.end()})
+    # Experiencers are usually described with the -ed adjective ("we were shocked").
+    for m in re.finditer(r"\b(I|we|they|he|she|it)\s+(?:am|is|are|was|were)\s+(shocking|amazing|boring|exciting|surprising|confusing|frightening)\b", sentence, re.I):
+        adjective = m.group(2)
+        corrected = adjective[:-3] + "ed" if adjective.lower().endswith("ing") else adjective
+        out.append({"original": adjective, "corrected": corrected, "error_type": "Word Form Error",
+                    "message": "Use the -ed adjective for the person or group experiencing this feeling.",
+                    "start": m.start(2), "end": m.end(2)})
+    for m in re.finditer(r"\b(running|run|runs|ran|walking|walk|walks|walked|driving|drive|drives|drove)\s+fastly\b", sentence, re.I):
+        out.append({"original": "fastly", "corrected": "fast", "error_type": "Word Choice",
+                    "message": "'Fast' is the standard adverb in this expression.", "start": m.end() - len("fastly"), "end": m.end()})
+    return out
+
+
+def detect_pronouns(sentence):
+    out = []
+    for m in re.finditer(r"\bme\s+and\s+my\s+friend\b", sentence, re.I):
+        replacement = "my friend and I"
+        if m.group(0)[0].isupper():
+            replacement = replacement.capitalize()
+        out.append({"original": m.group(0), "corrected": replacement, "error_type": "Pronoun Form",
+                    "message": "Use the subject pronoun 'I' in this compound subject.",
+                    "start": m.start(), "end": m.end()})
     return out
 
 
@@ -182,7 +295,7 @@ def detect_common_confusions(sentence):
 def run_rules(sentence, pos_tags=None):
     """Run each independent rule and return non-overlapping corrections."""
     candidates = (detect_subject_verb(sentence) + detect_articles(sentence) + detect_number_agreement(sentence)
-                  + detect_tense(sentence) + detect_prepositions(sentence) + detect_double_negatives(sentence)
+                  + detect_tense(sentence) + detect_verb_forms(sentence) + detect_pronouns(sentence) + detect_prepositions(sentence) + detect_double_negatives(sentence)
                   + detect_capitalization_punctuation(sentence) + detect_common_confusions(sentence))
     # Remove overlapping spans, preferring the widest multiword correction (double negative/preposition).
     candidates.sort(key=lambda e: (e["start"], -(e["end"] - e["start"])))
