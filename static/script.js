@@ -93,6 +93,9 @@ function acceptSuggestion(item) {
 
 function render(data) {
   analysis = data; dismissed = new Set();
+  const engineStatus = document.querySelector('#engine-status');
+  engineStatus.textContent = data.grammar_engine || 'Grammar engine status unavailable.';
+  engineStatus.classList.toggle('engine-fallback', !String(data.grammar_engine || '').startsWith('LanguageTool'));
   document.querySelector('#analysis-details').classList.remove('hidden');
   document.querySelector('#correction-preview').classList.remove('hidden');
   document.querySelector('#corrected-text').textContent = data.corrected_text;

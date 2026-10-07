@@ -5,3 +5,4 @@ __pycache__/
 .DS_Store
 instance/
 data/history.sqlite3
+data/language_tool/

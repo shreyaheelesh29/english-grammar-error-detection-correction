@@ -1,7 +1,9 @@
 import unittest
+from types import SimpleNamespace
 from app import app
 from nlp.cyk_parser import parse
 from nlp.grammar_rules import run_rules
+from nlp.language_engine import normalize_matches
 
 
 class GrammarProjectTests(unittest.TestCase):
@@ -27,6 +29,16 @@ class GrammarProjectTests(unittest.TestCase):
         ]
         errors = detect_subject_verb('The researcher analyze', tags)
         self.assertEqual([(e['original'], e['corrected']) for e in errors], [('analyze', 'analyzes')])
+
+    def test_language_engine_matches_keep_document_offsets(self):
+        text = 'The dog chase the cats.'
+        match = SimpleNamespace(offset=8, errorLength=5, replacements=['chases'],
+                                category=SimpleNamespace(name='GRAMMAR'),
+                                ruleId='TEST_RULE', message='Check subject–verb agreement.')
+        findings = normalize_matches([match], text)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual((findings[0]['original'], findings[0]['corrected']), ('chase', 'chases'))
+        self.assertEqual(text[findings[0]['start']:findings[0]['end']], findings[0]['original'])
 
     def test_empty_and_oversize_requests(self):
         self.assertEqual(self.client.post('/check', json={'text': '  '}).status_code, 400)

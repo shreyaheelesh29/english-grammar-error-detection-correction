@@ -9,6 +9,7 @@ from nlp.tokenizer import tokenize
 from nlp.pos_tagger import get_pos_tags
 from nlp.error_detector import detect_errors
 from nlp.correction import generate_correction
+from nlp.language_engine import check_text as check_with_language_tool
 
 app = Flask(__name__)
 ROOT = Path(__file__).resolve().parent
@@ -62,18 +63,20 @@ def check():
 
     sentences = split_sentences(clean, NLP)
     tags_by_sentence = [get_pos_tags(sentence, NLP) for sentence in sentences]
-    errors = detect_errors(sentences, tags_by_sentence)
-    # Rule offsets are sentence-local; convert them to positions in the complete normalized input.
-    cursor = 0
-    for i, sentence in enumerate(sentences):
-        offset = clean.find(sentence, cursor)
-        if offset < 0:
-            offset = cursor
-        cursor = offset + len(sentence)
-        for error in errors:
-            if error["sentence_index"] == i:
-                error["start"] += offset
-                error["end"] += offset
+    errors, grammar_engine = check_with_language_tool(clean)
+    if errors is None:
+        errors = detect_errors(sentences, tags_by_sentence)
+        # Fallback rule offsets are sentence-local; convert to document offsets.
+        cursor = 0
+        for i, sentence in enumerate(sentences):
+            offset = clean.find(sentence, cursor)
+            if offset < 0:
+                offset = cursor
+            cursor = offset + len(sentence)
+            for error in errors:
+                if error["sentence_index"] == i:
+                    error["start"] += offset
+                    error["end"] += offset
     corrected = generate_correction(clean, errors)["corrected_text"]
 
     flattened_tags = []
@@ -100,6 +103,7 @@ def check():
         "sentence_count": len(sentences),
         "word_count": sum(1 for t in tokenize(clean, NLP) if any(ch.isalnum() for ch in t["text"])),
         "error_count": len(errors), "errors": errors, "pos_tags": flattened_tags,
+        "grammar_engine": grammar_engine,
         "sentences": sentences,
         "grammar_score": score,
         "score_label": "Very Good" if score >= 90 else "Good" if score >= 80 else "Needs Improvement" if score >= 65 else "Major Corrections Needed",
