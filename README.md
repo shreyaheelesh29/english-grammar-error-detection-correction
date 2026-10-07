@@ -1,10 +1,11 @@
 # English Grammar Error Detection and Correction Using POS Tagging and Rule-Based Analysis
 
-A local Flask NLP teaching application. It combines transparent regex grammar rules with tokenization, sentence segmentation, optional spaCy statistical POS/morphology, add-one n-gram scoring, a limited CYK parser, optional WordNet lookup, and simple reference resolution. Grammar rules remain the primary detector; no external grammar API or LLM is used.
+A local Flask and Streamlit NLP teaching application. It combines transparent regex grammar rules with tokenization, sentence segmentation, optional spaCy statistical POS/morphology, add-one n-gram scoring, a limited CYK parser, optional WordNet lookup, and simple reference resolution. Grammar rules remain the primary detector; no external grammar API or LLM is used.
 
 ## Implemented
 
 - Flask interface with responsive dashboard, sample input, grammar score, error explanations, POS table, n-gram results, reference links, and parse view.
+- Streamlit interface in `streamlit_app.py` with corrections, POS tags, language insights, a CYK parser demonstration, and optional WordNet lookup.
 - Reusable tokenization, sentence segmentation, POS tagging and fallback, lemmatization where spaCy model exists, and morphology output.
 - Rule categories include subject-verb agreement (including core `be` forms), article choice, selected noun-number agreement, past tense, fixed prepositions, a double-negative pattern, capitalization, terminal punctuation, punctuation spacing/repetition, missing apostrophes in common contractions, and a small set of common confusions. The implementation supports only controlled patterns; unsupported constructs are not detected.
 - Sentence-structure checks flag likely dependent-clause fragments and comma splices for review. They use conservative surface patterns and do not automatically rewrite clauses.
@@ -32,6 +33,18 @@ python run.py
 ```
 
 Open <http://127.0.0.1:5000>. `python app.py` also starts the Flask development server. Without `en_core_web_sm`, tokenization and sentence segmentation use spaCy blank English, with a small rule-based POS fallback; POS and morphology quality is reduced.
+
+### Run the Streamlit interface
+
+With the same virtual environment and dependencies installed, run:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+### Deploy to Streamlit Community Cloud
+
+Push this repository to a GitHub repository you administer, then create an app at <https://share.streamlit.io/> using the repository, branch, and `streamlit_app.py` as the entrypoint. The repository root `requirements.txt` contains the app dependencies. Community Cloud deploys the app to a public `streamlit.app` URL by default; set access controls in the app settings if needed.
 
 WordNet is optional. To enable it once in an environment with network access:
 
