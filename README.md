@@ -49,7 +49,7 @@ streamlit run streamlit_app.py
 
 Push this repository to a GitHub repository you administer, then create an app at <https://share.streamlit.io/> using the repository, branch, and `streamlit_app.py` as the entrypoint. The repository root `requirements.txt` contains the app dependencies. Community Cloud deploys the app to a public `streamlit.app` URL by default; set access controls in the app settings if needed.
 
-WordNet is optional. To enable it once in an environment with network access:
+WordNet 3.0 is bundled under `nltk_data/corpora/wordnet.zip`, with its license alongside the archive. The apps add this repository data directory to NLTK automatically. If you run the analysis modules outside this project checkout, install the corpus in that environment with:
 
 ```bash
 python -m nltk.downloader wordnet omw-1.4

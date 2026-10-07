@@ -129,14 +129,16 @@ if result:
     c2.metric("Issues found", result["error_count"])
     c3.metric("Words", result["word_count"])
     c4.metric("Sentences", result["sentence_count"])
-    st.caption(f"Grammar engine: {result['grammar_engine']} · Analysis mode: {result['nlp_mode']}")
+    grammar_engine = result.get("grammar_engine", "Legacy result (engine not recorded)")
+    st.caption(f"Grammar engine: {grammar_engine} · Analysis mode: {result['nlp_mode']}")
 
     corrections_tab, tags_tab, insights_tab, syntax_tab, wordnet_tab = st.tabs(
         ["Corrections", "POS tags", "Language insights", "Syntax parser", "WordNet"]
     )
     with corrections_tab:
         st.subheader("Suggested corrected text")
-        st.text_area("Review and copy", result["corrected_text"], height=130, key="corrected_text")
+        st.session_state.setdefault("corrected_text", result["corrected_text"])
+        st.text_area("Review and copy", height=130, key="corrected_text")
         st.subheader("Findings")
         show_findings(result["errors"])
         if result["writing_alternatives"]:
