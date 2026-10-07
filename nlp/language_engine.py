@@ -33,22 +33,30 @@ def _local_tool():
     return _tool
 
 
-def _field(match, name, default=None):
-    if isinstance(match, dict):
-        return match.get(name, default)
-    return getattr(match, name, default)
+def _field(match, *names, default=None):
+    """Read wrapper attributes as well as raw API dictionaries."""
+    for name in names:
+        if isinstance(match, dict):
+            value = match.get(name)
+        else:
+            value = getattr(match, name, None)
+        if value is not None:
+            return value
+    return default
 
 
 def normalize_matches(matches, text):
     """Translate LanguageTool matches into the checker's offset-based format."""
     findings = []
     for match in matches:
-        start = int(_field(match, "offset", -1))
-        length = int(_field(match, "errorLength", 0))
-        if start < 0 or length < 0 or start + length > len(text):
+        start = int(_field(match, "offset", default=-1))
+        length = int(_field(match, "error_length", "errorLength", "length", default=0))
+        if start < 0 or length <= 0 or start + length > len(text):
             continue
-        replacements = _field(match, "replacements", ()) or ()
+        replacements = _field(match, "replacements", default=()) or ()
         replacement = replacements[0] if replacements else None
+        if isinstance(replacement, dict):
+            replacement = replacement.get("value")
         replacement = getattr(replacement, "value", replacement)
         if replacement is None:
             continue
@@ -56,10 +64,10 @@ def normalize_matches(matches, text):
         original = text[start:start + length]
         if replacement == original:
             continue
-        category = _field(match, "category", None)
+        category = _field(match, "category")
         category = getattr(category, "name", category)
-        rule_id = _field(match, "ruleId", "")
-        message = _field(match, "message", "LanguageTool found a possible issue.")
+        rule_id = _field(match, "rule_id", "ruleId", default="")
+        message = _field(match, "message", default="LanguageTool found a possible issue.")
         findings.append({
             "original": original,
             "corrected": replacement,

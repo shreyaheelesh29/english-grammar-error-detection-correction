@@ -1,13 +1,13 @@
 # English Grammar Error Detection and Correction Using Local LanguageTool
 
-A local Flask and Streamlit NLP application. Its primary Flask grammar checker is a local LanguageTool server, which supplies broad grammar, spelling, and style checks without sending writing to a public API. The app retains a small pattern-based fallback for offline or first-run setup failures, plus POS analysis, n-gram scoring, a limited CYK parser, optional WordNet lookup, and reference resolution. The fallback is labeled as limited; it is not equivalent to the primary engine.
+A local Flask and Streamlit NLP application. Both interfaces use a shared local LanguageTool engine for broad grammar, spelling, and style checks without sending writing to a public API. The app retains a small pattern-based fallback for offline or first-run setup failures, plus POS analysis, n-gram scoring, a limited CYK parser, optional WordNet lookup, and reference resolution. The fallback is labeled as limited; it is not equivalent to the primary engine.
 
 [![Open the Streamlit app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://english-grammar-error-detection-correction-hy5txg9vzpf4xrdkqkv.streamlit.app/)
 
 ## Implemented
 
 - Flask interface with responsive dashboard, sample input, grammar score, error explanations, POS table, n-gram results, reference links, and parse view.
-- Streamlit interface in `streamlit_app.py` with corrections, POS tags, language insights, a CYK parser demonstration, and optional WordNet lookup.
+- Streamlit interface in `streamlit_app.py` using the same shared grammar engine, with corrections, POS tags, language insights, a CYK parser demonstration, and optional WordNet lookup.
 - Reusable tokenization, sentence segmentation, POS tagging and fallback, lemmatization where spaCy model exists, and morphology output.
 - Local LanguageTool checks grammar, spelling, punctuation, and style, and returns replacement spans and explanations. A singleton local Java server is reused for checks. The first check may download the engine; subsequent checks run locally.
 - If LanguageTool cannot start, the app falls back to the project's small explicit rule set. The UI identifies which engine handled each check so fallback output is not mistaken for broad grammar coverage.

@@ -1,10 +1,10 @@
-"""Streamlit interface for the local, rule-based grammar checker."""
+"""Streamlit interface for the local grammar checker."""
 
 import streamlit as st
 
 from nlp.analysis import document_stats, grammar_score, resolve_references
 from nlp.correction import generate_correction
-from nlp.error_detector import detect_errors
+from nlp.checking import check_document
 from nlp.ngram_model import get_model
 from nlp.pos_tagger import get_pos_tags
 from nlp.preprocessing import preprocess_text, split_sentences
@@ -41,17 +41,7 @@ def analyze_text(raw_text, goal):
     nlp = load_nlp()
     sentences = split_sentences(clean, nlp)
     tags_by_sentence = [get_pos_tags(sentence, nlp) for sentence in sentences]
-    errors = detect_errors(sentences, tags_by_sentence)
-    cursor = 0
-    for index, sentence in enumerate(sentences):
-        offset = clean.find(sentence, cursor)
-        if offset < 0:
-            offset = cursor
-        cursor = offset + len(sentence)
-        for error in errors:
-            if error["sentence_index"] == index:
-                error["start"] += offset
-                error["end"] += offset
+    errors, grammar_engine = check_document(clean, sentences, tags_by_sentence)
 
     flattened_tags = [
         {**tag, "sentence_index": sentence_index}
@@ -68,6 +58,7 @@ def analyze_text(raw_text, goal):
         "word_count": sum(1 for token in tokenize(clean, nlp) if any(ch.isalnum() for ch in token["text"])),
         "error_count": len(errors),
         "errors": errors,
+        "grammar_engine": grammar_engine,
         "pos_tags": flattened_tags,
         "sentences": sentences,
         "grammar_score": score,
@@ -103,14 +94,14 @@ def show_findings(findings):
 st.set_page_config(page_title="English Grammar Checker", page_icon="✍️", layout="wide")
 st.title("✍️ English Grammar Checker")
 st.write(
-    "Check common grammar patterns, review suggested corrections, and explore "
-    "the analysis. The checker runs directly in this app and uses transparent rules."
+    "Check grammar, review suggested corrections, and explore "
+    "the analysis. Writing is checked with a local LanguageTool engine when available."
 )
 
 with st.sidebar:
     st.header("Writing preferences")
     goal = st.selectbox("Suggestion style", ["general", "academic", "business", "casual"])
-    st.caption("Style alternatives are optional suggestions; grammar findings are rule based.")
+    st.caption("Style alternatives are optional. A limited rule-based checker is used if LanguageTool is unavailable.")
 
 with st.form("grammar_check"):
     text = st.text_area(
@@ -123,7 +114,9 @@ if submitted:
     st.session_state.pop("analysis", None)
     try:
         with st.spinner("Checking your text…"):
-            st.session_state["analysis"] = analyze_text(text, goal)
+            analysis = analyze_text(text, goal)
+            st.session_state["analysis"] = analysis
+            st.session_state["corrected_text"] = analysis["corrected_text"]
     except ValueError as error:
         st.error(str(error))
 
@@ -136,7 +129,7 @@ if result:
     c2.metric("Issues found", result["error_count"])
     c3.metric("Words", result["word_count"])
     c4.metric("Sentences", result["sentence_count"])
-    st.caption(f"Analysis mode: {result['nlp_mode']}")
+    st.caption(f"Grammar engine: {result['grammar_engine']} · Analysis mode: {result['nlp_mode']}")
 
     corrections_tab, tags_tab, insights_tab, syntax_tab, wordnet_tab = st.tabs(
         ["Corrections", "POS tags", "Language insights", "Syntax parser", "WordNet"]
@@ -195,4 +188,4 @@ if result:
             st.json(wordnet_result)
 
 st.divider()
-st.caption("Educational demo: the rules cover selected patterns and may miss errors or flag text for review.")
+st.caption("Review suggested corrections in context. If LanguageTool is unavailable, the limited fallback may miss errors or flag text for review.")

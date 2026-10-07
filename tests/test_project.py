@@ -1,9 +1,11 @@
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 from app import app
 from nlp.cyk_parser import parse
 from nlp.grammar_rules import run_rules
 from nlp.language_engine import normalize_matches
+from nlp.checking import check_document
 
 
 class GrammarProjectTests(unittest.TestCase):
@@ -32,13 +34,37 @@ class GrammarProjectTests(unittest.TestCase):
 
     def test_language_engine_matches_keep_document_offsets(self):
         text = 'The dog chase the cats.'
-        match = SimpleNamespace(offset=8, errorLength=5, replacements=['chases'],
-                                category=SimpleNamespace(name='GRAMMAR'),
-                                ruleId='TEST_RULE', message='Check subject–verb agreement.')
+        # language_tool_python.Match exposes snake_case fields.
+        match = SimpleNamespace(offset=8, error_length=5, replacements=['chases'],
+                                category='GRAMMAR', rule_id='TEST_RULE',
+                                message='Check subject–verb agreement.')
         findings = normalize_matches([match], text)
         self.assertEqual(len(findings), 1)
         self.assertEqual((findings[0]['original'], findings[0]['corrected']), ('chase', 'chases'))
         self.assertEqual(text[findings[0]['start']:findings[0]['end']], findings[0]['original'])
+        self.assertEqual(findings[0]['rule_id'], 'TEST_RULE')
+
+    def test_language_engine_accepts_api_style_match_fields(self):
+        text = 'They was ready.'
+        findings = normalize_matches([{
+            'offset': 5, 'errorLength': 3, 'replacements': [{'value': 'were'}],
+            'category': {'name': 'GRAMMAR'}, 'ruleId': 'TEST_API_RULE',
+            'message': 'Check agreement.',
+        }], text)
+        self.assertEqual((findings[0]['original'], findings[0]['corrected']), ('was', 'were'))
+        self.assertEqual(findings[0]['rule_id'], 'TEST_API_RULE')
+
+    def test_shared_document_checker_preserves_engine_offsets_across_sentences(self):
+        text = 'First sentence. The dog chase cats.'
+        finding = {
+            'start': text.index('chase'), 'end': text.index('chase') + 5,
+            'original': 'chase', 'corrected': 'chases',
+            'sentence_index': 0,
+        }
+        with patch('nlp.checking.check_with_language_tool', return_value=([finding], 'LanguageTool local engine')):
+            errors, engine = check_document(text, ['First sentence.', 'The dog chase cats.'], [[], []])
+        self.assertEqual(engine, 'LanguageTool local engine')
+        self.assertEqual(errors[0]['sentence_index'], 1)
 
     def test_empty_and_oversize_requests(self):
         self.assertEqual(self.client.post('/check', json={'text': '  '}).status_code, 400)

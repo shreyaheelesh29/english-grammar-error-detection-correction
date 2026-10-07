@@ -7,9 +7,8 @@ from datetime import datetime, timezone
 from nlp.preprocessing import preprocess_text, split_sentences
 from nlp.tokenizer import tokenize
 from nlp.pos_tagger import get_pos_tags
-from nlp.error_detector import detect_errors
 from nlp.correction import generate_correction
-from nlp.language_engine import check_text as check_with_language_tool
+from nlp.checking import check_document
 
 app = Flask(__name__)
 ROOT = Path(__file__).resolve().parent
@@ -63,20 +62,7 @@ def check():
 
     sentences = split_sentences(clean, NLP)
     tags_by_sentence = [get_pos_tags(sentence, NLP) for sentence in sentences]
-    errors, grammar_engine = check_with_language_tool(clean)
-    if errors is None:
-        errors = detect_errors(sentences, tags_by_sentence)
-        # Fallback rule offsets are sentence-local; convert to document offsets.
-        cursor = 0
-        for i, sentence in enumerate(sentences):
-            offset = clean.find(sentence, cursor)
-            if offset < 0:
-                offset = cursor
-            cursor = offset + len(sentence)
-            for error in errors:
-                if error["sentence_index"] == i:
-                    error["start"] += offset
-                    error["end"] += offset
+    errors, grammar_engine = check_document(clean, sentences, tags_by_sentence)
     corrected = generate_correction(clean, errors)["corrected_text"]
 
     flattened_tags = []
