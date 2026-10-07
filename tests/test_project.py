@@ -66,6 +66,18 @@ class GrammarProjectTests(unittest.TestCase):
         self.assertEqual(engine, 'LanguageTool local engine')
         self.assertEqual(errors[0]['sentence_index'], 1)
 
+    def test_style_suggestion_control_toggles_optional_rewrites(self):
+        text = 'We went to the baseball game, and after that, we stopped to get something to eat.'
+        with patch('app.check_document', return_value=([], 'LanguageTool local engine')):
+            enabled = self.client.post('/check', json={
+                'text': text, 'include_style_suggestions': True,
+            }).get_json()
+            disabled = self.client.post('/check', json={
+                'text': text, 'include_style_suggestions': False,
+            }).get_json()
+        self.assertTrue(enabled['writing_alternatives'])
+        self.assertEqual(disabled['writing_alternatives'], [])
+
     def test_empty_and_oversize_requests(self):
         self.assertEqual(self.client.post('/check', json={'text': '  '}).status_code, 400)
         self.assertEqual(self.client.post('/check', json={'text': 'x' * 20001}).status_code, 413)

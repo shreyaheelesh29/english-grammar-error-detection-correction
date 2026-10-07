@@ -134,7 +134,7 @@ async function runCheck() {
   if(!input.value.trim()){statusNode.textContent='Add some text to check.';input.focus();return}
   checkButton.disabled=true;checkButton.classList.add('loading');checkButton.innerHTML='<span class="spinner"></span> Checking writing…';
   try {
-    const response=await fetch('/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:input.value,goal:document.querySelector('#writing-goal').value})});
+    const response=await fetch('/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:input.value,include_style_suggestions:document.querySelector('#style-suggestions').checked})});
     const data=await response.json();if(!response.ok)throw new Error(data.error||'Could not check this text.');render(data);
   } catch(error){statusNode.textContent=error.message||'Could not connect to the checker.'}
   finally{checkButton.disabled=false;checkButton.classList.remove('loading');checkButton.innerHTML='<span class="check-icon">✓</span> Check writing'}
@@ -159,7 +159,7 @@ document.querySelector('#sample-button').addEventListener('click',()=>{input.val
 document.querySelector('#rewrite-sample-button').addEventListener('click',()=>{input.value='We went to the baseball game, and after that, we stopped to get something to eat.';onTextChanged();runCheck()});
 document.querySelector('#clear-button').addEventListener('click',()=>{input.value='';onTextChanged();input.focus();document.querySelector('#analysis-details').classList.add('hidden');document.querySelector('#save-state').textContent='Not checked';statusNode.textContent=''});
 document.querySelector('#new-button').addEventListener('click',()=>document.querySelector('#clear-button').click());
-document.querySelector('#writing-goal').addEventListener('change',event=>{const messages={general:'Suggestions for everyday writing.',academic:'Suggestions favoring formal, precise academic phrasing.',business:'Suggestions favoring clear, professional workplace phrasing.',casual:'Suggestions that preserve a relaxed, conversational voice.'};document.querySelector('#goal-description').textContent=messages[event.target.value];if(input.value.trim())runCheck()});
+document.querySelector('#style-suggestions').addEventListener('change',()=>{if(input.value.trim())runCheck()});
 
 document.querySelector('#copy-button').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(analysis?.corrected_text||input.value);statusNode.textContent='Corrected text copied.'}catch{input.select();document.execCommand('copy');statusNode.textContent='Text copied.'}});
 document.querySelector('#download-button').addEventListener('click',()=>{const blob=new Blob([analysis?.corrected_text||input.value],{type:'text/plain;charset=utf-8'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='grammar-checker-corrected.txt';link.click();URL.revokeObjectURL(link.href)});

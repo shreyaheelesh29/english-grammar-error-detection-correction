@@ -81,9 +81,7 @@ def check():
     with sqlite3.connect(DB_PATH) as db:
         db.execute("INSERT INTO analyses(created_at, original, corrected, score, error_count) VALUES (?, ?, ?, ?, ?)",
                    (datetime.now(timezone.utc).isoformat(), clean, corrected, score, len(errors)))
-    goal = payload.get("goal", "general")
-    if goal not in {"general", "academic", "business", "casual"}:
-        goal = "general"
+    include_style_suggestions = payload.get("include_style_suggestions", True) is True
     return jsonify({
         "original_text": clean, "corrected_text": corrected,
         "sentence_count": len(sentences),
@@ -98,7 +96,7 @@ def check():
         "references": resolve_references(clean),
         "pos_distribution": stats["pos_distribution"],
         "structure_issues": analyze_structure(sentences),
-        "writing_alternatives": generate_rewrites(clean, goal),
+        "writing_alternatives": generate_rewrites(clean) if include_style_suggestions else [],
         "nlp_mode": "spaCy en_core_web_sm" if NLP is not None and "tagger" in NLP.pipe_names else "spaCy tokenizer + rule-based POS fallback"
     })
 

@@ -22,8 +22,8 @@
     <section class="document-column" id="checker" aria-label="Writing editor">
       <div class="document-heading">
         <div><p class="eyebrow">WRITING WORKSPACE</p><h1>Grammar checker</h1><p class="subheading">Write clearly, catch mistakes, and keep your voice.</p></div>
-        <label class="goal-control">Writing goal
-          <select id="writing-goal" aria-label="Writing goal"><option value="general">General</option><option value="academic">Academic</option><option value="business">Business</option><option value="casual">Casual</option></select>
+        <label class="style-control">Style suggestions
+          <span><input id="style-suggestions" type="checkbox" checked> Include optional rewrites</span>
         </label>
       </div>
 
@@ -71,7 +71,7 @@
         </nav>
         <div id="suggestion-list" class="suggestion-list"><div class="empty-review"><div class="empty-review-icon">✎</div><strong>Ready when you are</strong><p>Run a check to get grammar, punctuation, and writing suggestions.</p></div></div>
       </div>
-      <div class="goal-card"><div class="goal-icon">✧</div><div><strong>Writing goal</strong><p id="goal-description">Suggestions for everyday writing.</p></div></div>
+      <div class="goal-card"><div class="goal-icon">✧</div><div><strong>Optional style suggestions</strong><p>Shows limited phrase-based rewrites separately from grammar corrections. They may not appear for every text.</p></div></div>
     </aside>
   </main>
   <script src="{{ url_for('static', filename='script.js') }}" defer></script>

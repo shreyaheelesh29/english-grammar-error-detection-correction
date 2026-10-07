@@ -31,7 +31,7 @@ def load_nlp():
         return None
 
 
-def analyze_text(raw_text, goal):
+def analyze_text(raw_text, include_style_suggestions=True):
     clean = preprocess_text(raw_text)
     if not clean:
         raise ValueError("Please enter some text to check.")
@@ -66,7 +66,7 @@ def analyze_text(raw_text, goal):
         "ngram": get_model().score_text(clean),
         "references": resolve_references(clean),
         "structure_issues": analyze_structure(sentences),
-        "writing_alternatives": generate_rewrites(clean, goal),
+        "writing_alternatives": generate_rewrites(clean) if include_style_suggestions else [],
         "nlp_mode": (
             "spaCy en_core_web_sm" if nlp is not None and "tagger" in nlp.pipe_names
             else "spaCy tokenizer + rule-based POS fallback"
@@ -99,9 +99,9 @@ st.write(
 )
 
 with st.sidebar:
-    st.header("Writing preferences")
-    goal = st.selectbox("Suggestion style", ["general", "academic", "business", "casual"])
-    st.caption("Style alternatives are optional. A limited rule-based checker is used if LanguageTool is unavailable.")
+    st.header("Suggestion options")
+    include_style_suggestions = st.checkbox("Include optional style rewrites", value=True)
+    st.caption("Phrase-based rewrites are optional and separate from grammar corrections. A limited rule-based checker is used if LanguageTool is unavailable.")
 
 with st.form("grammar_check"):
     text = st.text_area(
@@ -114,7 +114,7 @@ if submitted:
     st.session_state.pop("analysis", None)
     try:
         with st.spinner("Checking your text…"):
-            analysis = analyze_text(text, goal)
+            analysis = analyze_text(text, include_style_suggestions)
             st.session_state["analysis"] = analysis
             st.session_state["corrected_text"] = analysis["corrected_text"]
     except ValueError as error:
