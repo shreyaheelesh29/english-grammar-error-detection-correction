@@ -4,6 +4,8 @@ A local Flask and Streamlit NLP application. Both interfaces use a shared local 
 
 [![Open the Streamlit app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://english-grammar-error-detection-correction-etlj7h2huybuaycdybb.streamlit.app/)
 
+For the detailed architecture, algorithms, code map, limitations, and presentation notes, see [PROJECT_GUIDE.md](PROJECT_GUIDE.md).
+
 ## Implemented
 
 - Flask interface with responsive dashboard, sample input, grammar score, error explanations, POS table, n-gram results, reference links, and parse view.

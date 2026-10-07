@@ -1,4 +1,4 @@
-"""Build and serialize the local Laplace-smoothed language model."""
+"""Inspect the built-in demo n-gram model and print its counts."""
 import json
 import sys
 from pathlib import Path
