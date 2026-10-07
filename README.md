@@ -16,7 +16,7 @@ A local Flask and Streamlit NLP application. Its primary Flask grammar checker i
 - Structured findings include character offsets, original/corrected span, category, explanation, and qualitative `rule_match_strength` (`strong`/`moderate`). It is not a calibrated probability.
 - Laplace-smoothed unigram, bigram and trigram models, unknown-token mapping, sentence probability and perplexity. The supplied demo CSV is the tiny training source by default; its scores are demonstration-only. Low likelihood is not itself a grammar error.
 - CYK parser with a small CFG: `S → NP VP`, `NP → DET N | PRON`, `VP → V NP | V PP`, `PP → P NP`. Rejection means outside this grammar, not ungrammatical English.
-- Optional WordNet lexical relations through NLTK, with graceful missing-data handling.
+- WordNet 3.0 lexical relations through NLTK. The corpus and its license are bundled under `nltk_data/`, so the Streamlit deployment has offline lookup data available.
 - SQLite analysis history, limited to recent 30 entries in the history API.
 - Aligned-corpus preprocessing script groups identical normalized source sentences before a deterministic 80/10/10 split. Evaluation script reports metrics computed on the input CSV; no corpus-level scores are claimed here.
 - 49 curated demonstration pairs in `dataset/grammar_dataset.csv`. These are examples, not a large-scale GEC corpus and not training evidence for grammar rules.

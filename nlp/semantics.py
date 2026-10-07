@@ -1,5 +1,6 @@
 """Optional WordNet lexical semantics, with a single actionable unavailable state."""
 import re
+from pathlib import Path
 
 INSTALL_COMMAND = "python -m nltk.downloader wordnet omw-1.4"
 STOPWORDS = {
@@ -12,6 +13,17 @@ STOPWORDS = {
     "other", "over", "some", "such", "than", "through", "under", "very", "went", "what", "when", "where",
     "which", "while", "would", "then", "ours", "ourselves",
 }
+
+
+def _add_bundled_nltk_data():
+    """Make the repository-bundled WordNet corpus visible to NLTK."""
+    try:
+        import nltk
+    except ImportError:
+        return
+    data_dir = Path(__file__).resolve().parents[1] / "nltk_data"
+    if data_dir.is_dir() and str(data_dir) not in nltk.data.path:
+        nltk.data.path.insert(0, str(data_dir))
 
 
 def _sense_data(syn):
@@ -29,6 +41,7 @@ def analyze_words(text):
         return {"available": True, "words": [], "note": "Enter text containing a word to look up."}
 
     try:
+        _add_bundled_nltk_data()
         from nltk.corpus import wordnet as wn
         # Force lazy corpus loading here so a missing installation is detected once.
         wn.ensure_loaded()
