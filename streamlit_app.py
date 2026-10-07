@@ -91,8 +91,8 @@ def show_findings(findings):
             col2.code(finding.get("corrected", ""))
 
 
-st.set_page_config(page_title="English Grammar Checker", page_icon="✍️", layout="wide")
-st.title("✍️ English Grammar Checker")
+st.set_page_config(page_title="English Grammar Checker", layout="wide")
+st.title("English Grammar Checker")
 st.write(
     "Check grammar, review suggested corrections, and explore "
     "the analysis. Writing is checked with a local LanguageTool engine when available."
