@@ -2,6 +2,8 @@
 
 A local Flask and Streamlit NLP teaching application. It combines transparent regex grammar rules with tokenization, sentence segmentation, optional spaCy statistical POS/morphology, add-one n-gram scoring, a limited CYK parser, optional WordNet lookup, and simple reference resolution. Grammar rules remain the primary detector; no external grammar API or LLM is used.
 
+[![Open the Streamlit app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://english-grammar-error-detection-correction-hy5txg9vzpf4xrdkqkv.streamlit.app/)
+
 ## Implemented
 
 - Flask interface with responsive dashboard, sample input, grammar score, error explanations, POS table, n-gram results, reference links, and parse view.
