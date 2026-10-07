@@ -117,9 +117,10 @@ with st.form("grammar_check"):
         "Text to check", value=SAMPLE_TEXT, height=170, max_chars=MAX_TEXT_CHARS,
         placeholder="Paste a sentence or paragraph…",
     )
-    submitted = st.form_submit_button("Check grammar", type="primary", use_container_width=True)
+    submitted = st.form_submit_button("Check grammar", type="primary", width="stretch")
 
 if submitted:
+    st.session_state.pop("analysis", None)
     try:
         with st.spinner("Checking your text…"):
             st.session_state["analysis"] = analyze_text(text, goal)
@@ -153,7 +154,7 @@ if result:
     with tags_tab:
         st.subheader("Part-of-speech tags")
         if result["pos_tags"]:
-            st.dataframe(result["pos_tags"], use_container_width=True, hide_index=True)
+            st.dataframe(result["pos_tags"], width="stretch", hide_index=True)
         else:
             st.info("No words to tag.")
     with insights_tab:
