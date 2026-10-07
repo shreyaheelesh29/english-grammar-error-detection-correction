@@ -27,6 +27,7 @@ def _local_tool():
             _tool = language_tool_python.LanguageTool(
                 "en-US",
                 config={"maxTextLength": 20000, "cacheSize": 128, "pipelineCaching": True},
+                language_tool_download_version="6.7",
             )
         except Exception as exc:  # Java, package, download, or server startup can fail.
             _startup_error = exc
