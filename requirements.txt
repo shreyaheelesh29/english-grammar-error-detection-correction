@@ -4,4 +4,4 @@ language-tool-python>=3.4,<4.0
 spacy>=3.7,<4.0
 nltk>=3.8,<4.0
 pandas>=2.0,<4.0
-numpy>=1.24,<2.0
+numpy>=1.24,<3.0
