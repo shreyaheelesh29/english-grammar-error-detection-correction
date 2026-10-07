@@ -2,7 +2,7 @@
 
 A local Flask and Streamlit NLP application. Both interfaces use a shared local LanguageTool engine for broad grammar, spelling, and style checks without sending writing to a public API. The app retains a small pattern-based fallback for offline or first-run setup failures, plus POS analysis, n-gram scoring, a limited CYK parser, optional WordNet lookup, and reference resolution. The fallback is labeled as limited; it is not equivalent to the primary engine.
 
-[![Open the Streamlit app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://english-grammar-error-detection-correction-hy5txg9vzpf4xrdkqkv.streamlit.app/)
+[![Open the Streamlit app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://english-grammar-error-detection-correction-etlj7h2huybuaycdybb.streamlit.app/)
 
 ## Implemented
 
