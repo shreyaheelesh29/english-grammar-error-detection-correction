@@ -1,125 +1,90 @@
-# NLP-Based English Grammar Error Detection and Correction System
+# English Grammar Error Detection and Correction Using POS Tagging and Rule-Based Analysis
 
-An explainable college-level NLP mini-project. The Flask application analyzes English text with spaCy preprocessing and a small, explicit rule engine. It demonstrates selected grammar patterns; it is not a comprehensive grammar checker.
+A local Flask NLP teaching application. It combines transparent regex grammar rules with tokenization, sentence segmentation, optional spaCy statistical POS/morphology, add-one n-gram scoring, a limited CYK parser, optional WordNet lookup, and simple reference resolution. Grammar rules remain the primary detector; no external grammar API or LLM is used.
 
-## Problem statement and objective
+## Implemented
 
-Writers often miss common agreement, article, tense, and preposition errors. This project demonstrates how basic NLP analysis can support a grammar tool: segment text into sentences, tokenize it, assign part-of-speech and morphology information, apply readable patterns, explain findings, and make targeted corrections.
+- Flask interface with responsive dashboard, sample input, grammar score, error explanations, POS table, n-gram results, reference links, and parse view.
+- Reusable tokenization, sentence segmentation, POS tagging and fallback, lemmatization where spaCy model exists, and morphology output.
+- Rule categories include subject-verb agreement (including core `be` forms), article choice, selected noun-number agreement, past tense, fixed prepositions, a double-negative pattern, capitalization, terminal punctuation, punctuation spacing/repetition, missing apostrophes in common contractions, and a small set of common confusions. The implementation supports only controlled patterns; unsupported constructs are not detected.
+- Sentence-structure checks flag likely dependent-clause fragments and comma splices for review. They use conservative surface patterns and do not automatically rewrite clauses.
+- Optional style rewrites suggest alternate transitions for the phrase “and after that” and a small set of nearby constructions. They are explicitly separated from grammar corrections and must be applied by the user.
+- Structured findings include character offsets, original/corrected span, category, explanation, and qualitative `rule_match_strength` (`strong`/`moderate`). It is not a calibrated probability.
+- Laplace-smoothed unigram, bigram and trigram models, unknown-token mapping, sentence probability and perplexity. The supplied demo CSV is the tiny training source by default; its scores are demonstration-only. Low likelihood is not itself a grammar error.
+- CYK parser with a small CFG: `S → NP VP`, `NP → DET N | PRON`, `VP → V NP | V PP`, `PP → P NP`. Rejection means outside this grammar, not ungrammatical English.
+- Optional WordNet lexical relations through NLTK, with graceful missing-data handling.
+- SQLite analysis history, limited to recent 30 entries in the history API.
+- Aligned-corpus preprocessing script groups identical normalized source sentences before a deterministic 80/10/10 split. Evaluation script reports metrics computed on the input CSV; no corpus-level scores are claimed here.
+- 49 curated demonstration pairs in `dataset/grammar_dataset.csv`. These are examples, not a large-scale GEC corpus and not training evidence for grammar rules.
 
-## Features
+## Install and run
 
-- Flask web interface with asynchronous `POST /check` requests.
-- Sentence segmentation, tokenization, POS tags, lemmas, and morphology fields.
-- Eight controlled rule families: subject–verb and pronoun/verb agreement, `I` agreement, articles, number agreement, selected past tense, selected prepositions, and a supported double-negative pattern.
-- Explanations, correction suggestions, counts, and token analysis.
-- Position-based correction so repeated words elsewhere are not changed accidentally.
-- Small CSV of educational examples for demonstration and evaluation.
-- No paid service, external API, or LLM.
-
-## Technologies and NLP techniques
-
-Python, Flask, spaCy, HTML, CSS, and vanilla JavaScript. spaCy supplies sentence boundaries, tokenization, POS labels, lemmas, and morphological features when `en_core_web_sm` is installed. `Number`, `Person`, `Tense`, and verb-form features may appear in each token's `morphology` field depending on the model and token. The rule engine is deliberately written as readable regular-expression patterns over text spans, supported by NLP preprocessing; it does not claim that the rules are learned from the CSV.
-
-If the model is unavailable, the app still starts using spaCy's blank English tokenizer/sentencizer and a very small POS fallback. That fallback is less accurate and is identified in the response/UI. Download the trained model for the intended POS and morphology demonstration.
-
-## System architecture
-
-```text
-Browser → Flask /check → whitespace normalization → sentence segmentation
-        → spaCy tokenization / POS / lemma / morphology
-        → controlled grammar rules → classified findings with spans
-        → right-to-left span correction → JSON → results tables
-```
-
-## Project structure
-
-```text
-nlp-grammar-checker/
-├── app.py
-├── requirements.txt
-├── nlp/
-│   ├── preprocessing.py
-│   ├── tokenizer.py
-│   ├── pos_tagger.py
-│   ├── grammar_rules.py
-│   ├── error_detector.py
-│   └── correction.py
-├── dataset/grammar_dataset.csv
-├── templates/index.html
-├── static/style.css
-├── static/script.js
-└── README.md
-```
-
-## Installation and run
-
-From this project directory:
+Python 3.10+ is recommended. From this directory:
 
 ```bash
-python -m venv venv
-# macOS / Linux
-source venv/bin/activate
-# Windows PowerShell: .\venv\Scripts\Activate.ps1
+python -m venv .venv
+# macOS/Linux
+source .venv/bin/activate
+# Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
-python app.py
+python run.py
 ```
 
-Open <http://127.0.0.1:5000>. If you skip the model download, the app starts in fallback mode. The Flask development server is for local student demonstrations.
+Open <http://127.0.0.1:5000>. `python app.py` also starts the Flask development server. Without `en_core_web_sm`, tokenization and sentence segmentation use spaCy blank English, with a small rule-based POS fallback; POS and morphology quality is reduced.
 
-## Example
+WordNet is optional. To enable it once in an environment with network access:
 
-Input: `She go to college every day.`
+```bash
+python -m nltk.downloader wordnet omw-1.4
+```
 
-Expected correction: `She goes to college every day.` The output has one sentence, six words, and one Subject-Verb Agreement finding. The POS table shows token, POS, lemma, and morphology for each token.
+## Dataset setup and preprocessing
 
-Other examples:
+The included examples do not satisfy the scale or provenance of an academic corpus. Obtain BEA-2019/W&amp;I+LOCNESS, NUCLE, FCE, JFLEG, or another corpus only through its official access and licensing terms. The project does not bundle or automatically download restricted corpora. Export aligned examples as UTF-8 CSV with `incorrect,correct` columns; `source,target` are also accepted.
 
-| Input | Selected correction |
-|---|---|
-| `He is an good student.` | `He is a good student.` |
-| `Yesterday I go home.` | `Yesterday I went home.` |
-| `These book are interesting.` | `These books are interesting.` |
-| `I don't know nothing.` | `I don't know anything.` |
+```bash
+python training/preprocess_dataset.py path/to/aligned.csv --out data
+```
 
-## Grammar rules implemented
+This writes `data/train/pairs.jsonl`, `data/validation/pairs.jsonl`, `data/test/pairs.jsonl`, and `data/statistics.json`. Normalized identical source strings are grouped before splitting to reduce exact-duplicate leakage. Near-duplicate semantic detection is not implemented. Raw corpora should be kept under `data/raw/` only when their license permits.
 
-1. Present-simple agreement for a controlled verb list (`go`, `play`, `have`, `do`, `like`) and personal pronouns, including `I`.
-2. `a`/`an` selection using common written vowel starts and a few silent-h examples (`honest`, `hour`, `heir`). It does not model pronunciation reliably for all words.
-3. Singular/plural matching for a small demonstrative and noun list.
-4. `go`/`goes` after selected past-time expressions becomes `went`.
-5. Three fixed preposition patterns: `good in` → `good at`, `interested on` → `interested in`, and `depend of` → `depend on`.
-6. A possible double-negative pattern for “(do/does/did) not know nothing”. It is a pattern warning, not semantic interpretation.
+The project structure keeps corpus staging separate:
 
-## Dataset and evaluation
+```text
+data/raw/ data/processed/ data/train/ data/validation/ data/test/
+```
 
-`dataset/grammar_dataset.csv` is a small set of hand-written examples, not a comprehensive English grammar corpus. The current rule engine does not train on the CSV. The intended controlled evaluation includes at least these 15 cases: `She go to college.`, `He go to school.`, `They plays football.`, `I goes to college.`, `He have a book.`, `These book are interesting.`, `Yesterday I go to college.`, `He is an good student.`, `She is a honest girl.`, `I don't know nothing.`, `She goes to college every day.`, `They play football.`, `He has a book.`, `I went to college yesterday.`, and `She go. She go.` (the final case checks two repeated occurrences and sentence offsets).
+## Evaluate / inspect model counts
 
-For a reproducible controlled metric, label the 15 examples above as expected-error or expected-clean, and compare each predicted error span and corrected sentence with the expected labels/corrections. Precision = true positives / (true positives + false positives); recall = true positives / (true positives + false negatives); F1 = 2 × precision × recall / (precision + recall). Count a detection as correct only when its error type/span is expected; count a correction as correct only when the resulting sentence exactly matches the expected sentence. Report false positives as flagged errors in expected-clean examples. These hand-selected examples exercise the supported rules and do not estimate performance on general English.
+```bash
+python training/evaluate.py dataset/grammar_dataset.csv
+python training/train_ngram.py
+```
 
-## How the System Works (viva explanation)
+Evaluation uses detection presence and exact corrected-sentence match against aligned CSV examples. It prints precision, recall, F1 and exact match from the supplied data. Run it on a held-out corpus split for meaningful results. There are no baseline/hybrid corpus results in the repository because no large licensed corpus has been supplied. The n-gram counts are currently built in memory from the demo pairs at app startup and reused for the process lifetime.
 
-1. **Input:** the browser sends the text to Flask as JSON.
-2. **Sentence segmentation:** preprocessing separates sentence units so rule findings keep a sentence index.
-3. **Tokenization:** spaCy splits words and punctuation while preserving token positions.
-4. **POS tagging:** spaCy labels each token (such as `PRON`, `VERB`, `NOUN`). This helps inspect the grammatical role of words.
-5. **Morphological analysis:** spaCy's model can expose features such as number, person, tense, and verb form; the app presents them for analysis. The simple rules only use a controlled subset of English forms.
-6. **Grammar rule matching:** independent, readable rule functions search for supported patterns.
-7. **Error detection and classification:** findings include the original span, replacement, category, explanation, and position.
-8. **Correction:** exact spans are replaced from right to left, preventing earlier edits from shifting later positions.
-9. **Output:** Flask returns JSON; JavaScript displays counts, corrected text, errors, and POS details without reloading.
+## API
 
-Segmentation organizes the input; tokenization identifies units; POS and morphology expose linguistic information; rules find known patterns; classification makes results understandable; positioned correction changes only the intended text.
+- `POST /check` with `{"text":"She go to college."}`: findings, corrected text, statistics, score, POS, n-grams and reference heuristic.
+- `POST /api/parse` with `{"text":"She reads the book."}`: grammar, CYK chart and parse tree if accepted.
+- `POST /api/semantics` with `{"text":"car"}`: WordNet senses/relations when data is installed.
+- `GET /api/history`: latest 30 saved analyses.
 
-## Limitations
+Input is limited to 20,000 characters. This version does not accept uploaded documents. The filesystem-backed SQLite history is created at `data/history.sqlite3`.
 
-- The rule list and controlled vocabulary are intentionally small. Many valid or incorrect constructions are not recognized.
-- Article choice is based on a few spelling patterns, not a pronunciation dictionary.
-- The tense rule only handles selected `go` forms and past-time cues; it does not infer general tense or context.
-- The fallback POS labels and morphology are approximate. Install `en_core_web_sm` for model-based analysis.
-- The double-negative rule is a supported surface pattern and can miss context or dialect variation.
-- There is no spelling checker, semantic model, or learned correction system.
+## Viva notes: NLP concepts
 
-## Future scope
+- **Tokenization and segmentation:** identify word/punctuation units and sentence boundaries before local rules operate. Character offsets connect findings to source text.
+- **POS and morphology:** labels such as PRON, VERB and NOUN describe grammatical roles. A trained spaCy pipeline supplies statistical tags and features; the fallback uses small lexical/suffix heuristics. Inflection features help explain agreement, but the current rules are deliberately narrower than the full feature set.
+- **Rule-based analysis:** explicit patterns detect a known construction, attach its span and explanation, then corrections are applied from right to left so earlier offsets stay valid.
+- **HMM:** spaCy's trained tagger is a statistical sequence tagger; this code does not separately implement/train an HMM. An independent educational HMM tagger is future work, rather than a claim about spaCy internals.
+- **N-grams:** unigram/bigram/trigram likelihoods estimate token sequence likelihood. Laplace add-one smoothing assigns nonzero mass to unseen events; `<UNK>` maps out-of-vocabulary words. Perplexity is the inverse geometric mean likelihood and indicates surprise under this small model, not grammaticality.
+- **Syntax and CYK:** a CFG defines productions; CYK is a bottom-up dynamic program for CNF-style binary productions. The chart and one backpointer-derived tree are exposed for the project's limited lexicon. General English parsing is out of scope.
+- **Semantics and Lesk:** WordNet endpoint demonstrates lexical definitions and relations. Context-based Lesk word-sense disambiguation is not implemented yet; WordNet senses are listed, not selected using Lesk.
+- **Reference analysis:** a nearest preceding capitalized name heuristic links selected pronouns; it does not enforce robust gender/number/person constraints and is not full coreference resolution.
+- **Hybrid approach:** deterministic rules explain findings; POS/morphology and n-gram values support inspection. A model is not asked to make opaque corrections, preserving local operation and explainability.
 
-Possible extensions include ML-based grammatical error detection, transformer correction, context-aware suggestions, stronger semantic analysis, broader grammar rules, additional languages, spell checking, highlighted edits, personalized writing suggestions, word-processor integration, and larger annotated datasets. These features are not implemented here.
+## Limitations and future scope
+
+The current rules and vocabulary are small and can produce misses or false positives; the score is a length-normalized weighted rule penalty, not a validated proficiency measure. The n-gram model uses demo data unless adapted to an authorized corpus. Uploads, a true trained HMM module, Lesk WSD, broad error rules, baselines, calibrated confidence, document-level export, charts, and near-duplicate detection are not implemented. Possible extensions: neural GEC, transformer correction, multilingual/Indian language support, speech/OCR input, browser extension, personalized tutor, domain models, richer semantics, and discourse/coreference models.
