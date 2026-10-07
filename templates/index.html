@@ -2,38 +2,77 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>NLP-Based English Grammar Checker</title>
+  <meta name="theme-color" content="#f7f8fc">
+  <title>Grammar Checker</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <main class="page">
-    <header class="hero">
-      <div class="eyebrow">STUDENT NLP PROJECT</div>
-      <h1>NLP-Based English Grammar Checker</h1>
-      <p>Detect grammatical errors using Natural Language Processing</p>
-    </header>
-    <section class="card input-card" aria-labelledby="input-title">
-      <div class="section-heading"><div><span class="step">01</span><h2 id="input-title">Enter your text</h2></div><span class="hint">Rule-based analysis · no external API</span></div>
-      <textarea id="text-input" rows="6" placeholder="Enter a sentence such as:\nShe go to college every day." aria-label="English text to check"></textarea>
-      <div class="actions"><button id="check-button" class="primary">Check Grammar</button><button id="clear-button" class="secondary">Clear</button><span id="status" role="status" aria-live="polite"></span></div>
-    </section>
-    <section id="results" class="results hidden" aria-live="polite">
-      <div class="summary-grid">
-        <article class="card metric"><span>Sentences</span><strong id="sentence-count">0</strong></article>
-        <article class="card metric"><span>Words</span><strong id="word-count">0</strong></article>
-        <article class="card metric"><span>Detected errors</span><strong id="error-count">0</strong></article>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Grammar Checker home"><span class="brand-mark">G</span><span>Grammar Checker</span></a>
+    <nav class="product-nav" aria-label="Main navigation"><a href="#checker">Checker</a><a href="#nlp-analysis" data-open-analysis>NLP analysis</a><a href="#syntax-analysis" data-open-analysis>Syntax parser</a><a href="#lexical-analysis" data-open-analysis>Word meaning</a></nav>
+    <div class="topbar-actions">
+      <span class="privacy-note"><span class="privacy-dot"></span>Private workspace</span>
+      <button id="new-button" class="top-button" type="button">＋ <span>New document</span></button>
+      <button id="copy-button" class="top-button" type="button" disabled>Copy text</button>
+      <button id="download-button" class="top-button top-button-dark" type="button" disabled>Download</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="document-column" id="checker" aria-label="Writing editor">
+      <div class="document-heading">
+        <div><p class="eyebrow">WRITING WORKSPACE</p><h1>Grammar checker</h1><p class="subheading">Write clearly, catch mistakes, and keep your voice.</p></div>
+        <label class="goal-control">Writing goal
+          <select id="writing-goal" aria-label="Writing goal"><option value="general">General</option><option value="academic">Academic</option><option value="business">Business</option><option value="casual">Casual</option></select>
+        </label>
       </div>
-      <article class="card"><div class="section-heading"><div><span class="step">02</span><h2>Corrected text</h2></div></div><p id="corrected-text" class="corrected"></p></article>
-      <article class="card"><div class="section-heading"><div><span class="step">03</span><h2>Detected errors</h2></div></div>
-        <p id="no-errors" class="empty hidden">No grammar errors detected.</p>
-        <div class="table-wrap"><table id="error-table"><thead><tr><th>Original</th><th>Error type</th><th>Explanation</th><th>Suggestion</th></tr></thead><tbody></tbody></table></div>
-      </article>
-      <article class="card"><div class="section-heading"><div><span class="step">04</span><h2>POS-tag analysis</h2></div><span class="hint">POS = part of speech</span></div>
-        <div class="table-wrap"><table><thead><tr><th>Token</th><th>POS</th><th>Lemma</th><th>Morphology</th></tr></thead><tbody id="pos-body"></tbody></table></div>
-        <p id="nlp-mode" class="footnote"></p>
-      </article>
+
+      <div class="editor-card">
+        <div class="editor-toolbar"><div class="doc-label"><span class="doc-icon">▤</span><span id="document-name">Untitled document</span><span id="save-state">Not checked</span></div><div class="editor-tools"><button id="sample-button" type="button">Try a sample</button><button id="rewrite-sample-button" type="button">Rewrite demo</button><button id="clear-button" type="button">Clear</button></div></div>
+        <div class="editor-wrap" id="editor-wrap">
+          <pre id="highlight-layer" aria-hidden="true"></pre>
+          <textarea id="text-input" spellcheck="true" placeholder="Start writing or paste your text here…" aria-label="Document text"></textarea>
+        </div>
+        <div class="editor-footer"><div class="editor-hint"><span class="keyboard-key">⌘</span> + Enter to check</div><div class="live-stats"><span><b id="live-word-count">0</b> words</span><span><b id="live-char-count">0</b> characters</span><span id="reading-time">1 min read</span></div></div>
+      </div>
+      <section id="correction-preview" class="correction-preview hidden" aria-live="polite"><div class="correction-heading"><div><span class="correction-check">✓</span><div><strong>Corrected text</strong><span id="correction-label">Suggested version</span></div></div><div class="correction-actions"><button id="copy-correction" type="button">Copy</button><button id="apply-correction" type="button">Replace original</button></div></div><p id="corrected-text"></p></section>
+      <div class="editor-cta"><button id="check-button" class="check-button" type="button"><span class="check-icon">✓</span> Check writing</button><span id="status" role="status" aria-live="polite"></span></div>
+
+      <section id="analysis-details" class="analysis-details hidden" aria-label="Writing insights">
+        <div class="insight-strip">
+          <article class="insight-card"><span class="insight-label">Writing score</span><strong><span id="score">—</span><small>/100</small></strong><span id="score-label" class="insight-caption">Based on detected issues</span></article>
+          <article class="insight-card"><span class="insight-label">Sentences</span><strong id="sentence-count">0</strong><span class="insight-caption">In this document</span></article>
+          <article class="insight-card"><span class="insight-label">Vocabulary</span><strong id="vocabulary-count">0</strong><span class="insight-caption">Unique words</span></article>
+          <article class="insight-card"><span class="insight-label">Avg. sentence</span><strong id="reading-level">—</strong><span class="insight-caption">Words per sentence</span></article>
+        </div>
+        <details id="nlp-analysis" class="advanced-analysis"><summary>Explore language analysis</summary>
+          <div class="analysis-grid">
+            <article class="insight-panel"><h3>Token and POS analysis</h3><p id="nlp-mode" class="muted"></p><div class="table-wrap"><table><thead><tr><th>Token</th><th>POS</th><th>Lemma</th><th>Morphology</th></tr></thead><tbody id="pos-body"></tbody></table></div></article>
+            <article class="insight-panel"><h3>Language model</h3><p class="muted">Smoothed likelihood is supporting context only; unusual wording is not automatically an error.</p><div id="ngram-results" class="ngram-results"></div></article>
+            <article class="insight-panel"><h3>Sentence structure</h3><div id="structure-results"></div></article>
+            <article class="insight-panel"><h3>Reference links</h3><div id="reference-results"></div></article>
+            <article class="insight-panel" id="lexical-analysis"><h3>Lexical meaning</h3><p class="muted">Look up content words and word relationships.</p><button id="semantic-button" class="subtle-button" type="button">Look up words</button><div id="semantic-results" class="semantic-results"></div></article>
+            <article class="insight-panel" id="syntax-analysis"><h3>Syntax parser</h3><p class="muted">Generate a parse tree and CYK chart for supported sentence patterns.</p><button id="parse-button" class="subtle-button" type="button">Generate parse</button><pre id="parse-result" class="parse-result hidden"></pre></article>
+          </div>
+          <p class="analysis-disclaimer">The local checker uses explainable grammar patterns. Some suggestions are heuristic and should be reviewed in context.</p>
+        </details>
+      </section>
+      <footer class="page-footer">Your text is analyzed locally by this app. Suggestions are generated from supported patterns and may not catch every issue.</footer>
     </section>
-    <footer>Educational rule-based checker. It recognizes selected patterns, not every English grammar error.</footer>
+
+    <aside class="review-column" aria-label="Writing suggestions">
+      <div class="review-card">
+        <div class="review-header"><div><p class="eyebrow">YOUR REVIEW</p><h2>Suggestions</h2></div><span id="issue-count" class="issue-count">—</span></div>
+        <div class="review-summary"><span id="review-summary-text">Check your writing to see suggestions.</span><button id="fix-all-button" type="button" disabled>Fix all</button></div>
+        <nav class="filter-tabs" aria-label="Filter suggestions">
+          <button class="filter-tab active" data-filter="all" type="button">All <span id="all-count">0</span></button>
+          <button class="filter-tab" data-filter="correctness" type="button">Correctness <span id="correctness-count">0</span></button>
+          <button class="filter-tab" data-filter="clarity" type="button">Style <span id="style-count">0</span></button>
+        </nav>
+        <div id="suggestion-list" class="suggestion-list"><div class="empty-review"><div class="empty-review-icon">✎</div><strong>Ready when you are</strong><p>Run a check to get grammar, punctuation, and writing suggestions.</p></div></div>
+      </div>
+      <div class="goal-card"><div class="goal-icon">✧</div><div><strong>Writing goal</strong><p id="goal-description">Suggestions for everyday writing.</p></div></div>
+    </aside>
   </main>
   <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 </body>
