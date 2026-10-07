@@ -7,11 +7,26 @@ def _error(sentence, match, corrected, kind, message):
             "message": message, "start": match.start(), "end": match.end()}
 
 
-def detect_subject_verb(sentence):
+def _third_person_singular(lemma):
+    lower = lemma.lower()
+    if lower in {"be", "have", "do", "go"}:
+        return {"be": "is", "have": "has", "do": "does", "go": "goes"}[lower]
+    if re.search(r"[^aeiou]y$", lower):
+        return lemma[:-1] + "ies"
+    if lower.endswith(("s", "x", "z", "ch", "sh", "o")):
+        return lemma + "es"
+    return lemma + "s"
+
+
+def detect_subject_verb(sentence, pos_tags=None):
     found = []
     # Controlled present-simple patterns; avoid trying to conjugate arbitrary verbs.
-    forms = {"go": ("goes", "go"), "play": ("plays", "play"), "have": ("has", "have"), "do": ("does", "do"), "like": ("likes", "like")}
-    for m in re.finditer(r"\b(I|you|he|she|it|we|they)\s+(goes|go|plays|play|has|have|does|do|likes|like)\b", sentence, re.I):
+    forms = {"go": ("goes", "go"), "play": ("plays", "play"), "have": ("has", "have"), "do": ("does", "do"), "like": ("likes", "like"),
+             "dance": ("dances", "dance"), "walk": ("walks", "walk"), "run": ("runs", "run"), "work": ("works", "work"),
+             "study": ("studies", "study"), "eat": ("eats", "eat"), "read": ("reads", "read"), "write": ("writes", "write"),
+             "sing": ("sings", "sing"), "watch": ("watches", "watch"), "teach": ("teaches", "teach"), "pass": ("passes", "pass")}
+    verb_forms = "|".join(sorted((form for pair in forms.values() for form in pair), key=len, reverse=True))
+    for m in re.finditer(r"\b(I|you|he|she|it|we|they)\s+(" + verb_forms + r")\b", sentence, re.I):
         subject, verb = m.group(1), m.group(2); s, v = subject.lower(), verb.lower()
         base = next((b for b, pair in forms.items() if v in pair), None)
         if not base: continue
@@ -22,6 +37,43 @@ def detect_subject_verb(sentence):
             corrected = expected.capitalize() if verb[0].isupper() else expected
             found.append({"original": verb, "corrected": corrected, "error_type": "Subject-Verb Agreement",
                           "message": f"The subject '{subject}' takes '{expected}' in this present-simple pattern.", "start": start, "end": end})
+    # With a trained spaCy parser, use the syntactic subject and verb features
+    # instead of requiring a hard-coded verb pair.
+    if pos_tags:
+        by_index = {tag.get("token_i"): tag for tag in pos_tags if tag.get("token_i") is not None}
+        for verb in pos_tags:
+            if verb.get("pos") != "VERB" or verb.get("tag") not in {"VB", "VBP", "VBZ"}:
+                continue
+            verb_i = verb.get("token_i")
+            if verb_i is None or verb.get("lemma", "").lower() in {"be", "have", "do"}:
+                continue
+            subject = next((tag for tag in pos_tags if tag.get("dep") in {"nsubj", "nsubjpass"} and tag.get("head_i") == verb_i), None)
+            if not subject:
+                continue
+            subject_word = subject.get("token", "").lower()
+            morphology = subject.get("morphology", "")
+            features = set(re.findall(r"(?:Number|Person)=([A-Za-z]+)", morphology))
+            third_singular = subject_word in {"he", "she", "it"} or ("Sing" in features and "3" in features)
+            if subject.get("pos") in {"NOUN", "PROPN"} and "Plur" not in features and not subject_word.endswith("s"):
+                third_singular = True
+            if verb.get("tag") == "VBZ" and not third_singular:
+                corrected = verb.get("lemma", "").lower()
+            elif verb.get("tag") in {"VB", "VBP"} and third_singular:
+                corrected = _third_person_singular(verb.get("lemma", ""))
+            else:
+                continue
+            original = verb.get("token", "")
+            start = verb.get("idx", -1)
+            end = start + len(original)
+            if start < 0 or any(item["start"] == start and item["end"] == end for item in found):
+                continue
+            if original.isupper():
+                corrected = corrected.upper()
+            elif original[0].isupper():
+                corrected = corrected.capitalize()
+            found.append({"original": original, "corrected": corrected, "error_type": "Subject-Verb Agreement",
+                          "message": f"The parsed subject '{subject.get('token')}' and verb form appear to disagree; use '{corrected}'.",
+                          "start": start, "end": end})
     be_forms = {"am": {"i"}, "is": {"he", "she", "it"}, "are": {"you", "we", "they"},
                 "was": {"i", "he", "she", "it"}, "were": {"you", "we", "they"}}
     for m in re.finditer(r"\b(I|you|he|she|it|we|they)\s+(am|is|are|was|were)\b", sentence, re.I):
@@ -294,7 +346,7 @@ def detect_common_confusions(sentence):
 
 def run_rules(sentence, pos_tags=None):
     """Run each independent rule and return non-overlapping corrections."""
-    candidates = (detect_subject_verb(sentence) + detect_articles(sentence) + detect_number_agreement(sentence)
+    candidates = (detect_subject_verb(sentence, pos_tags) + detect_articles(sentence) + detect_number_agreement(sentence)
                   + detect_tense(sentence) + detect_verb_forms(sentence) + detect_pronouns(sentence) + detect_prepositions(sentence) + detect_double_negatives(sentence)
                   + detect_capitalization_punctuation(sentence) + detect_common_confusions(sentence))
     # Remove overlapping spans, preferring the widest multiword correction (double negative/preposition).

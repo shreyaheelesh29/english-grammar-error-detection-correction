@@ -26,11 +26,12 @@ def get_pos_tags(sentence, nlp=None):
         # Model-less spaCy pipelines tokenize but do not assign POS; use the fallback then.
         if any(t.pos_ for t in doc if not t.is_punct):
             return [{"token": t.text, "pos": t.pos_, "tag": t.tag_, "lemma": t.lemma_ or t.text.lower(),
-                     "morphology": str(t.morph) or "—", "idx": t.idx} for t in doc if not t.is_space]
+                     "morphology": str(t.morph) or "—", "idx": t.idx, "dep": t.dep_, "token_i": t.i,
+                     "head_i": t.head.i} for t in doc if not t.is_space]
     result = []
     for t in tokenize(sentence):
         word = t["text"]; pos = _fallback_pos(word)
         lemma = word.lower()
-        if word.lower() in {"goes", "plays", "has", "does", "likes"}: lemma = {"goes":"go", "plays":"play", "has":"have", "does":"do", "likes":"like"}[word.lower()]
+        if word.lower() in {"goes", "plays", "has", "does", "likes", "dances"}: lemma = {"goes":"go", "plays":"play", "has":"have", "does":"do", "likes":"like", "dances":"dance"}[word.lower()]
         result.append({"token": word, "pos": pos, "tag": pos, "lemma": lemma, "morphology": "—", "idx": t["idx"]})
     return result

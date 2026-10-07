@@ -14,6 +14,20 @@ class GrammarProjectTests(unittest.TestCase):
         self.assertEqual(data['errors'][0]['error_type'], 'Subject-Verb Agreement')
         self.assertIn('grammar_score', data)
 
+    def test_third_person_regular_verb(self):
+        data = self.client.post('/check', json={'text': 'he dance with her'}).get_json()
+        self.assertEqual(data['corrected_text'], 'He dances with her.')
+
+    def test_dependency_rule_handles_unlisted_verb(self):
+        from nlp.grammar_rules import detect_subject_verb
+        tags = [
+            {'token': 'The', 'pos': 'DET', 'tag': 'DT', 'lemma': 'the', 'morphology': '', 'idx': 0, 'dep': 'det', 'token_i': 0, 'head_i': 1},
+            {'token': 'researcher', 'pos': 'NOUN', 'tag': 'NN', 'lemma': 'researcher', 'morphology': 'Number=Sing', 'idx': 4, 'dep': 'nsubj', 'token_i': 1, 'head_i': 2},
+            {'token': 'analyze', 'pos': 'VERB', 'tag': 'VB', 'lemma': 'analyze', 'morphology': 'VerbForm=Fin|Tense=Pres', 'idx': 15, 'dep': 'ROOT', 'token_i': 2, 'head_i': 2},
+        ]
+        errors = detect_subject_verb('The researcher analyze', tags)
+        self.assertEqual([(e['original'], e['corrected']) for e in errors], [('analyze', 'analyzes')])
+
     def test_empty_and_oversize_requests(self):
         self.assertEqual(self.client.post('/check', json={'text': '  '}).status_code, 400)
         self.assertEqual(self.client.post('/check', json={'text': 'x' * 20001}).status_code, 413)
