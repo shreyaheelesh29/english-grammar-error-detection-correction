@@ -92,6 +92,28 @@ def show_findings(findings):
 
 
 st.set_page_config(page_title="English Grammar Checker", layout="wide")
+st.markdown(
+    """
+    <style>
+    :root { font-size: 18px; }
+    .stApp { font-size: 1.08rem; }
+    .stApp p, .stApp label, .stApp input, .stApp textarea,
+    .stApp button, .stApp [role="tab"], .stApp li,
+    .stApp [data-testid="stCaptionContainer"] {
+        font-size: 1.08rem !important;
+        line-height: 1.55;
+    }
+    .stApp h1 { font-size: 2.25rem !important; line-height: 1.2; }
+    .stApp h2 { font-size: 1.7rem !important; line-height: 1.25; }
+    .stApp h3 { font-size: 1.35rem !important; line-height: 1.3; }
+    .stApp textarea { font-size: 1.15rem !important; line-height: 1.6; }
+    .stApp [data-testid="stMetricValue"] { font-size: 1.55rem !important; }
+    .stApp [data-testid="stMetricLabel"] { font-size: 1rem !important; }
+    .stApp code, .stApp pre { font-size: 1rem !important; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 st.title("English Grammar Checker")
 st.write(
     "Check grammar, review suggested corrections, and explore "
