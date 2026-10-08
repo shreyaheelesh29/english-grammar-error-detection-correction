@@ -13,7 +13,13 @@ from nlp.sentence_structure import analyze_structure
 from nlp.tokenizer import tokenize
 
 MAX_TEXT_CHARS = 20_000
-SAMPLE_TEXT = "She go to college every day. They was happy, and after that they stopped to get something to eat"
+SAMPLE_TEXTS = (
+    "She go to college every day. They was happy, and after that they stopped to get something to eat.",
+    "He don't have enough time to finish the assignment.",
+    "Yesterday, we goes to the library and borrow two books.",
+    "The students was excited because they has prepared for the science fair.",
+    "I have went to that restaurant several times, and the food are always delicious.",
+)
 
 
 @st.cache_resource
@@ -127,8 +133,12 @@ with st.sidebar:
     st.caption("Phrase-based rewrites are optional and separate from grammar corrections. A limited rule-based checker is used if LanguageTool is unavailable.")
 
 st.session_state.setdefault("input_text", "")
+st.session_state.setdefault("sample_text_index", -1)
 if st.button("Load example text"):
-    st.session_state["input_text"] = SAMPLE_TEXT
+    next_index = (st.session_state["sample_text_index"] + 1) % len(SAMPLE_TEXTS)
+    st.session_state["sample_text_index"] = next_index
+    st.session_state["input_text"] = SAMPLE_TEXTS[next_index]
+    st.success(f"Example {next_index + 1} of {len(SAMPLE_TEXTS)} loaded. Click again for another.")
 
 with st.form("grammar_check"):
     text = st.text_area(
