@@ -104,6 +104,44 @@ class GrammarProjectTests(unittest.TestCase):
         errors = run_rules('Yesterday, I wanted to buy a book.')
         self.assertFalse(any(e['error_type'] == 'Tense Error' and e['original'] == 'buy' for e in errors))
 
+    def test_past_tense_rules_cover_more_regular_and_copula_verbs(self):
+        for sentence, expected in [
+            ('Yesterday, we borrow books.', 'Yesterday, we borrowed books.'),
+            ('She is happy yesterday.', 'She was happy yesterday.'),
+            ('In 2020, he goes to college.', 'In 2020, he went to college.'),
+            ('They finished the work two days ago.', 'They finished the work two days ago.'),
+        ]:
+            errors = run_rules(sentence)
+            corrected = sentence
+            for error in sorted(errors, key=lambda item: item['start'], reverse=True):
+                corrected = corrected[:error['start']] + error['corrected'] + corrected[error['end']:]
+            self.assertEqual(corrected, expected, sentence)
+
+        fallback_sentence = 'Yesterday, I goes to the library.'
+        fallback_errors = run_rules(fallback_sentence)
+        fallback_corrected = fallback_sentence
+        for error in sorted(fallback_errors, key=lambda item: item['start'], reverse=True):
+            fallback_corrected = (fallback_corrected[:error['start']] + error['corrected']
+                                  + fallback_corrected[error['end']:])
+        self.assertEqual(fallback_corrected, 'Yesterday, I went to the library.')
+
+    def test_explicit_past_rule_overrides_conflicting_language_tool_suggestion(self):
+        text = 'Yesterday, he goes to the library.'
+        start = text.index('goes')
+        language_tool_finding = {
+            'start': start, 'end': start + len('goes'), 'original': 'goes',
+            'corrected': 'goes', 'error_type': 'Grammar', 'sentence_index': 0,
+        }
+        with patch('nlp.checking.check_with_language_tool',
+                   return_value=([language_tool_finding], 'LanguageTool local engine')):
+            errors, engine = check_document(text, [text], [[]])
+        self.assertEqual(engine, 'LanguageTool local engine + explicit past-time rules')
+        corrected = text
+        for error in sorted(errors, key=lambda item: item['start'], reverse=True):
+            corrected = corrected[:error['start']] + error['corrected'] + corrected[error['end']:]
+        self.assertEqual(corrected, 'Yesterday, he went to the library.')
+        self.assertTrue(any(error['error_type'] == 'Tense Error' for error in errors))
+
     def test_reported_sentence_catches_common_errors(self):
         text = ('Yesterday, me and my friend goes to the store for buy some apple. '
                 'There is three dog running fastly on the street, and we was shocking very much. '

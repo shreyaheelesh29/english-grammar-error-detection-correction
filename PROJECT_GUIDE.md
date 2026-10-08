@@ -4,7 +4,7 @@
 
 This is an English grammar error detection and correction **educational prototype**. A user enters English text. The app checks it with a local LanguageTool engine when that engine is available, shows suggested edits and explanations, and offers separate tabs for linguistic analysis. It has two interfaces: a public Streamlit app and a Flask web app/API.
 
-The project is a hybrid system: a broad, prebuilt grammar checker is the primary checker; explicit local rules provide a limited fallback; smaller NLP demonstrations show how text can be analyzed in other ways. It does not train a large grammar-correction model, and it should not be presented as an automatic expert editor.
+The project is a hybrid system: a broad, prebuilt grammar checker is the primary checker; explicit past-time rules also supplement its suggestions for supported simple-past patterns; the same local rules provide a limited fallback; smaller NLP demonstrations show how text can be analyzed in other ways. It does not train a large grammar-correction model, and it should not be presented as an automatic expert editor.
 
 ## 2. End-to-end processing
 
@@ -13,7 +13,7 @@ For a normal Streamlit check, the path is:
 1. `streamlit_app.py` reads the submitted text, rejects empty or over-20,000-character input, and calls `analyze_text`.
 2. `nlp/preprocessing.py` normalizes curly quotes and whitespace, then splits the text into sentences using spaCy boundaries where possible and a punctuation-based fallback otherwise.
 3. `nlp/tokenizer.py` and `nlp/pos_tagger.py` provide tokens and POS information. A trained spaCy English model is used only if installed. Otherwise the app uses spaCy's blank English tokenizer plus simple word-list and suffix heuristics for POS tags.
-4. `nlp/checking.py` calls `nlp/language_engine.py`. The primary path starts/reuses a local Java LanguageTool process, checks the complete document, and converts the engine matches into the project's finding format. If the engine is unavailable or fails, it calls `nlp/error_detector.py` and the explicit patterns in `nlp/grammar_rules.py`.
+4. `nlp/checking.py` calls `nlp/language_engine.py`. The primary path starts/reuses a local Java LanguageTool process, checks the complete document, converts engine matches into the project's finding format, and supplements them with explicit past-time rules for supported verbs when cues such as “yesterday,” “last week,” “two days ago,” or a year indicate a completed past event. A matching explicit rule takes precedence over a conflicting LanguageTool suggestion for that verb. If the engine is unavailable or fails, `nlp/error_detector.py` runs the explicit patterns in `nlp/grammar_rules.py` as a limited fallback.
 5. Findings carry character offsets and suggested replacement text. `nlp/correction.py` applies replacements from the end of the text toward the beginning so earlier offsets remain valid.
 6. The app calculates a grammar score and document statistics, and builds POS summaries, n-gram scores, reference guesses, sentence-structure warnings, and optional style alternatives.
 7. The UI shows the corrected text and findings. Separate tabs run the POS, document-insight, parser, and WordNet views.
@@ -53,7 +53,7 @@ The Flask interface follows the same shared checker through `app.py` and the sam
 
 ### Rule-based fallback
 
-The fallback applies explicit regular-expression patterns for a modest set of constructions such as common subject–verb agreement, tense, article, number, pronoun, and word-form errors. Some rules also use POS/dependency information if a trained spaCy parser is present. These rules are understandable and quick, but their vocabulary and grammar coverage are limited. The UI reports which engine was used.
+The explicit rule set applies regular-expression patterns for a modest set of constructions such as common subject–verb agreement, simple past tense, article, number, pronoun, and word-form errors. Past-tense rules use a curated verb list and clear past-time phrases; they do not infer every tense from unrestricted context. Some rules also use POS/dependency information if a trained spaCy parser is present. These rules are understandable and quick, but their vocabulary and grammar coverage are limited. The UI reports which engine was used.
 
 ### Tokenization, sentence segmentation, and POS
 
@@ -143,4 +143,3 @@ The value is immediate feedback plus inspectable explanations and small algorith
 ## 10. Short presentation summary
 
 > “This project is a hybrid English grammar-checking and NLP teaching demo. It uses a local LanguageTool engine for its main grammar suggestions, with a transparent rule-based fallback. It also demonstrates POS tagging, simple document statistics, a smoothed n-gram model, CYK parsing with a small CFG, and WordNet lookup. Its key strength is inspectable feedback and locally processed text; its key limitation is narrow model and dataset coverage, so suggestions and educational submodules need human interpretation.”
-

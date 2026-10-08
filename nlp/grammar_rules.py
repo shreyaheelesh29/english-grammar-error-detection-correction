@@ -188,10 +188,17 @@ def detect_tense(sentence):
     # deliberately handles common simple-past contexts and a controlled verb
     # list. It is broader than the original go-only rule, without pretending to
     # infer tense from unrestricted context.
-    explicit_past_cue = re.search(r"\b(?:yesterday|last\s+(?:night|week|month|year|monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b", sentence, re.I)
+    explicit_past_cue = re.search(
+        r"\b(?:yesterday|last\s+(?:night|week|month|year|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|"
+        r"\d+\s+(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)\s+ago|"
+        r"(?:in|during)\s+(?:19\d{2}|20\d{2}))\b",
+        sentence,
+        re.I,
+    )
 
     irregular = {
         "go": "went", "goes": "went", "say": "said", "says": "said",
+        "am": "was", "is": "was", "are": "were",
         "have": "had", "has": "had", "do": "did", "does": "did",
         "get": "got", "gets": "got", "eat": "ate", "eats": "ate",
         "come": "came", "comes": "came", "see": "saw", "sees": "saw",
@@ -201,7 +208,20 @@ def detect_tense(sentence):
         "speak": "spoke", "speaks": "spoke", "drive": "drove", "drives": "drove",
         "leave": "left", "leaves": "left", "meet": "met", "meets": "met",
         "find": "found", "finds": "found", "think": "thought", "thinks": "thought",
-        "tell": "told", "tells": "told",
+        "tell": "told", "tells": "told", "know": "knew", "knows": "knew",
+        "pay": "paid", "pays": "paid",
+        "feel": "felt", "feels": "felt", "keep": "kept", "keeps": "kept",
+        "sleep": "slept", "sleeps": "slept", "stand": "stood", "stands": "stood",
+        "sit": "sat", "sits": "sat", "bring": "brought", "brings": "brought",
+        "build": "built", "builds": "built", "send": "sent", "sends": "sent",
+        "spend": "spent", "spends": "spent", "hear": "heard", "hears": "heard",
+        "wear": "wore", "wears": "wore", "teach": "taught", "teaches": "taught",
+        "catch": "caught", "catches": "caught", "choose": "chose", "chooses": "chose",
+        "fall": "fell", "falls": "fell", "grow": "grew", "grows": "grew",
+        "begin": "began", "begins": "began", "break": "broke", "breaks": "broke",
+        "drink": "drank", "drinks": "drank", "draw": "drew", "draws": "drew",
+        "fly": "flew", "flies": "flew", "win": "won", "wins": "won",
+        "lose": "lost", "loses": "lost", "understand": "understood", "understands": "understood",
     }
     regular = {
         "walk": "walked", "walks": "walked", "play": "played", "plays": "played",
@@ -211,6 +231,14 @@ def detect_tense(sentence):
         "visit": "visited", "visits": "visited", "use": "used", "uses": "used",
         "call": "called", "calls": "called", "help": "helped", "helps": "helped",
         "want": "wanted", "wants": "wanted", "need": "needed", "needs": "needed",
+        "borrow": "borrowed", "borrows": "borrowed", "finish": "finished", "finishes": "finished",
+        "start": "started", "starts": "started", "watch": "watched", "watches": "watched",
+        "wash": "washed", "washes": "washed", "clean": "cleaned", "cleans": "cleaned",
+        "cook": "cooked", "cooks": "cooked", "talk": "talked", "talks": "talked",
+        "look": "looked", "looks": "looked", "move": "moved", "moves": "moved",
+        "arrive": "arrived", "arrives": "arrived", "ask": "asked", "asks": "asked",
+        "carry": "carried", "carries": "carried", "try": "tried", "tries": "tried",
+        "enjoy": "enjoyed", "enjoys": "enjoyed", "dance": "danced", "dances": "danced",
     }
     present_forms = {**irregular, **regular}
     if explicit_past_cue:
@@ -221,6 +249,19 @@ def detect_tense(sentence):
                 continue
             original = m.group(1)
             corrected = present_forms[original.lower()]
+            # Do not turn a present-perfect auxiliary into "had" while leaving
+            # its participle behind (for example, "has finished").
+            if original.lower() in {"have", "has"} and re.match(
+                r"\s+(?:been|become|begun|broken|brought|built|bought|caught|chosen|come|done|driven|drunk|eaten|fallen|felt|flown|forgotten|found|given|gone|grown|heard|held|kept|known|left|lost|made|met|paid|read|run|said|seen|sent|shown|sung|sat|slept|spoken|spent|stood|taken|taught|thought|understood|worn|won|written|\w+ed)\b",
+                sentence[m.end():],
+                re.I,
+            ):
+                continue
+            if original.lower() in {"am", "is", "are"}:
+                subject = re.search(r"\b(I|you|he|she|it|we|they|[A-Za-z]+)\s+$", prefix, re.I)
+                if subject:
+                    subject_word = subject.group(1).lower()
+                    corrected = "were" if subject_word in {"you", "we", "they"} or subject_word.endswith("s") else "was"
             if original.isupper():
                 corrected = corrected.upper()
             elif original[0].isupper():
@@ -350,7 +391,11 @@ def run_rules(sentence, pos_tags=None):
                   + detect_tense(sentence) + detect_verb_forms(sentence) + detect_pronouns(sentence) + detect_prepositions(sentence) + detect_double_negatives(sentence)
                   + detect_capitalization_punctuation(sentence) + detect_common_confusions(sentence))
     # Remove overlapping spans, preferring the widest multiword correction (double negative/preposition).
-    candidates.sort(key=lambda e: (e["start"], -(e["end"] - e["start"])))
+    candidates.sort(key=lambda e: (
+        e["start"],
+        -(e["end"] - e["start"]),
+        0 if e["error_type"] == "Tense Error" else 1,
+    ))
     selected = []
     for item in candidates:
         if not selected or item["start"] >= selected[-1]["end"]:
